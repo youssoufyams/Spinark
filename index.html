@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SPINARK V7 - FULL INTERACTIVE</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --purple: #a03b60;
+            --blue: #1e5cff;
+            --dark: #050505;
+            --card: #121212;
+            --gradient: linear-gradient(135deg, var(--purple), var(--blue));
+            --text-gray: #888;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background-color: var(--dark); color: white; font-family: 'Segoe UI', sans-serif; 
+            margin: 0; padding-bottom: 90px; overflow-x: hidden;
+        }
+
+        /* --- UI COMPONENTS --- */
+        .header {
+            position: fixed; top: 0; width: 100%; height: 65px;
+            background: rgba(0,0,0,0.95); display: flex; 
+            justify-content: space-between; align-items: center;
+            padding: 0 15px; z-index: 1000; border-bottom: 1px solid #222;
+        }
+        .logo-box { font-weight: 900; font-size: 22px; background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .profile-img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--purple); object-fit: cover; }
+
+        /* --- SIDEBAR (PARAMÈTRES DÉVELOPPÉS) --- */
+        .sidebar {
+            position: fixed; top: 0; left: -100%; width: 85%; height: 100%;
+            background: #0d0d0d; z-index: 3000; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 25px; overflow-y: auto; border-right: 1px solid var(--purple);
+        }
+        .sidebar.active { left: 0; }
+        .overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); display:none; z-index:2500; backdrop-filter: blur(4px); }
+
+        .admin-card { background: #1a1a1a; padding: 20px; border-radius: 15px; margin-bottom: 25px; border-left: 4px solid var(--blue); }
+        .menu-section-title { font-size: 12px; color: var(--purple); font-weight: bold; margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .side-item { display: flex; align-items: center; gap: 15px; padding: 14px 0; color: #eee; border-bottom: 1px solid #1a1a1a; font-size: 15px; }
+        .side-item i { color: var(--blue); width: 20px; }
+
+        /* --- MODALS (INTERACTIONS) --- */
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:#000; z-index: 4000; flex-direction: column; animation: slideUp 0.3s ease; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-header { padding: 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #222; }
+
+        /* --- DÉROULANT CONTENU --- */
+        .hero {
+            height: 65vh; background: linear-gradient(to bottom, transparent, var(--dark)), url('https://images.unsplash.com/photo-1598897349388-00fc827c2f82?q=80&w=1000');
+            background-size: cover; background-position: center;
+            display: flex; flex-direction: column; justify-content: flex-end; padding: 25px;
+        }
+        .hero h1 { font-size: 42px; margin: 5px 0; font-weight: 900; }
+        .btn-main { background: var(--gradient); color: white; border: none; padding: 16px; border-radius: 12px; font-weight: bold; width: 100%; margin-top: 15px; display: flex; align-items: center; justify-content: center; gap: 12px; cursor: pointer; }
+
+        .stats-row { display: flex; justify-content: space-around; padding: 20px 0; background: #0a0a0a; border-bottom: 1px solid #1a1a1a; }
+        .stat-item { text-align: center; }
+        .stat-val { display: block; font-weight: bold; color: var(--blue); font-size: 18px; }
+        .stat-lbl { font-size: 10px; color: var(--text-gray); text-transform: uppercase; }
+
+        .section-header { padding: 25px 15px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .scroll-x { display: flex; gap: 18px; overflow-x: auto; padding: 0 15px; scrollbar-width: none; }
+        .scroll-x::-webkit-scrollbar { display: none; }
+
+        .item-card { min-width: 170px; background: var(--card); border-radius: 15px; overflow: hidden; border: 1px solid #222; }
+        .item-thumb { width: 100%; height: 110px; background: #252525; display: flex; align-items: center; justify-content: center; position: relative; }
+        .badge { position: absolute; top: 10px; right: 10px; background: var(--purple); font-size: 9px; padding: 3px 7px; border-radius: 5px; }
+        .item-info { padding: 12px; }
+
+        /* --- NAVIGATION --- */
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 75px; background: rgba(0,0,0,0.98); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #222; z-index: 1000; }
+        .nav-link { color: #555; text-align: center; font-size: 11px; text-decoration: none; transition: 0.3s; }
+        .nav-link.active { color: var(--blue); }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <i data-lucide="menu" onclick="toggleSidebar()" style="cursor:pointer"></i>
+        <div class="logo-box">SPINARK</div>
+        <img src="FB_IMG_17742945537873586.jpg" class="profile-img" onclick="openModal('modal-profil')">
+    </header>
+
+    <div id="overlay" class="overlay" onclick="toggleSidebar()"></div>
+    <div id="sidebar" class="sidebar">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="logo-box" style="font-size:18px;">SPINARK SETTINGS</div>
+            <i data-lucide="x" onclick="toggleSidebar()"></i>
+        </div>
+
+        <div class="admin-card" style="margin-top:20px;">
+            <div style="font-weight:bold; font-size:16px;">Christ Esdras Y.</div>
+            <div style="color:var(--text-gray); font-size:12px;">Directeur de Projet</div>
+            <div style="margin-top:10px; font-size:11px; color:var(--blue);">● Session Admin Active</div>
+        </div>
+
+        <div class="menu-section-title">Administration</div>
+        <div class="side-item" onclick="alert('Chargement du Dashboard Financier...')"><i data-lucide="trending-up"></i> Revenus & Ventes</div>
+        <div class="side-item"><i data-lucide="users"></i> Utilisateurs Inscrits</div>
+        <div class="side-item"><i data-lucide="database"></i> Gestion du Catalogue</div>
+
+        <div class="menu-section-title">Paramètres Application</div>
+        <div class="side-item"><i data-lucide="shield-check"></i> Sécurité & DRM Video</div>
+        <div class="side-item"><i data-lucide="globe"></i> Langues & Localisation</div>
+        <div class="side-item"><i data-lucide="credit-card"></i> Méthodes de Paiement</div>
+
+        <div class="menu-section-title">Support & Info</div>
+        <div class="side-item"><i data-lucide="help-circle"></i> Aide technique</div>
+        <div class="side-item" style="color:#ff4444;"><i data-lucide="log-out" style="color:#ff4444;"></i> Déconnexion</div>
+    </div>
+
+    <div id="modal-video" class="modal">
+        <div class="modal-header">
+            <i data-lucide="chevron-left" onclick="closeModal('modal-video')"></i>
+            <span style="font-weight:bold;">Lecteur Cinéma Immersion</span>
+            <div id="status" style="color:#1e5cff; font-size:12px; margin-top:10px;">
+    ⏸️ En pause
+</div>
+        </div>
+        <div id="video-player" style="width:100%; aspect-ratio:16/9; background:#000; position:relative; border-bottom: 2px solid var(--purple);">
+    <video id="video-element" width="100%" height="100%" style="object-fit:cover; background:#000;">
+        <source src="KONLOUIYE.mp4" type="video/mp4">
+        Votre navigateur ne supporte pas la vidéo.
+    </video>
+    <div id="overlay-play" style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <i data-lucide="play-circle" size="60" style="color:var(--purple); opacity:0.8;"></i>
+    </div>
+    <div id="progress-bar-container" style="position:absolute; bottom:0; left:0; width:100%; height:6px; background:#222;">
+        <div id="progress-bar" style="width:0%; height:100%; background:var(--purple);"></div>
+    </div>
+</div>
+        <div style="padding:25px;">
+            <h2 style="margin:0;">KONLOUIYÉ</h2>
+            <div style="display:flex; gap:10px; margin:15px 0;">
+                <span style="background:#222; padding:5px 10px; border-radius:5px; font-size:11px;">4K Ultra HD</span>
+                <span style="background:#222; padding:5px 10px; border-radius:5px; font-size:11px;">Audio: Mooré/FR</span>
+            </div>
+            <p style="color:var(--text-gray); line-height:1.6;">Le long-métrage événement qui redéfinit le cinéma local. Une immersion totale dans une histoire captivante.</p>
+            <button class="btn-main"><i data-lucide="download"></i> Télécharger pour mode hors-ligne</button>
+        </div>
+    </div>
+
+    <main style="margin-top:65px;">
+        
+        <section class="hero">
+            <span style="background:var(--purple); width:fit-content; padding:4px 10px; border-radius:20px; font-size:10px; font-weight:bold;">À LA UNE</span>
+            <h1>KONLOUIYÉ</h1>
+            <p style="color:#ccc; font-size:14px; margin:0;">Vivez l'expérience ultime du cinéma burkinabè.</p>
+            <button class="btn-main" onclick="openModal('modal-video'); startTracking();">
+    <i data-lucide="play-circle"></i> REGARDER MAINTENANT (2000 F)
+</button>
+        </section>
+
+        <section class="stats-row">
+            <div class="stat-item"><span class="stat-val">423M</span><span class="stat-lbl">Budget FCFA</span></div>
+            <div class="stat-item"><span class="stat-val">15K+</span><span class="stat-lbl">Spectateurs</span></div>
+            <div class="stat-item"><span class="stat-val">4.9/5</span><span class="stat-lbl">Note Public</span></div>
+        </section>
+
+        <div class="section-header">
+            <span>Contenus Premium</span>
+            <span style="color:var(--purple); font-size:12px;">Voir tout <i data-lucide="chevron-right" size="12" style="vertical-align:middle"></i></span>
+        </div>
+        <div class="scroll-x">
+            <div class="item-card" onclick="openModal('modal-video')">
+                <div class="item-thumb"><span class="badge">VOD</span><i data-lucide="lock" size="30" style="color:#444"></i></div>
+                <div class="item-info">
+                    <div style="font-weight:bold; font-size:13px;">Le Film Complet</div>
+                    <div style="color:var(--blue); font-size:12px; margin-top:5px;">2 000 FCFA</div>
+                </div>
+            </div>
+            <div class="item-card">
+                <div class="item-thumb"><span class="badge">EXCLU</span><i data-lucide="clapperboard" size="30" style="color:#444"></i></div>
+                <div class="item-info">
+                    <div style="font-weight:bold; font-size:13px;">Making-Of</div>
+                    <div style="color:var(--blue); font-size:12px; margin-top:5px;">1 000 FCFA</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section-header"><span>Contenus Gratuits</span></div>
+        <div class="scroll-x">
+            <div class="item-card">
+                <div class="item-thumb" style="background:url('https://source.unsplash.com/random/400x300/?theatre') center/cover;"></div>
+                <div class="item-info"><div style="font-weight:bold; font-size:13px;">Bande-annonce</div></div>
+            </div>
+            <div class="item-card">
+                <div class="item-thumb" style="background:url('https://source.unsplash.com/random/400x300/?interview') center/cover;"></div>
+                <div class="item-info"><div style="font-weight:bold; font-size:13px;">Interview Réalisateur</div></div>
+            </div>
+        </div>
+
+        <div class="section-header"><span>Boutique Spinark</span></div>
+        <div class="scroll-x">
+            <div class="item-card" style="min-width:140px; text-align:center; padding:15px;" onclick="alert('Ajouté au panier !')">
+                <div style="font-size:40px;">👕</div>
+                <div style="font-weight:bold; margin:10px 0;">T-Shirt Konlouiyé</div>
+                <div style="color:var(--blue);">5 000 F</div>
+            </div>
+            <div class="item-card" style="min-width:140px; text-align:center; padding:15px;">
+                <div style="font-size:40px;">🧢</div>
+                <div style="font-weight:bold; margin:10px 0;">Casquette SP</div>
+                <div style="color:var(--blue);">3 500 F</div>
+            </div>
+        </div>
+
+        <div style="margin:30px 15px; background:var(--gradient); border-radius:20px; padding:25px; position:relative; overflow:hidden;">
+            <i data-lucide="ticket" style="position:absolute; right:-20px; top:-20px; size:120px; opacity:0.1; transform:rotate(-20deg);"></i>
+            <h3 style="margin:0;">BILLETTERIE LIVE</h3>
+            <p style="font-size:13px; opacity:0.9;">Réservez votre place pour le grand concert au Stade du 4 Août.</p>
+            <button style="background:white; color:black; border:none; padding:12px 25px; border-radius:10px; font-weight:bold; margin-top:10px;" onclick="alert('Ouverture de la plateforme sécurisée de billetterie...')">ACHETER MON BILLET</button>
+        </div>
+
+    </main>
+
+    <nav class="bottom-nav">
+        <a href="#" class="nav-link active"><i data-lucide="home"></i><br>Accueil</a>
+        <a href="#" class="nav-link"><i data-lucide="film"></i><br>Films</a>
+        <a href="#" class="nav-link"><i data-lucide="shopping-cart"></i><br>Boutique</a>
+        <a href="#" class="nav-link" onclick="toggleSidebar()"><i data-lucide="settings"></i><br>Admin</a>
+    </nav>
+
+    <script>
+        // Initialisation des icônes
+        lucide.createIcons();
+        // ===== TRACKING SPINARK (BASE) =====
+let visitors = localStorage.getItem("visitors") || 0;
+let views = localStorage.getItem("views") || 0;
+let watch = localStorage.getItem("watch") || 0;
+
+// Compteur visiteur (1 seule fois)
+if(!localStorage.getItem("visited")){
+    visitors++;
+    localStorage.setItem("visited", true);
+    localStorage.setItem("visitors", visitors);
+}
+
+        // Gestion de la Sidebar
+        function toggleSidebar() {
+            const side = document.getElementById('sidebar');
+            const over = document.getElementById('overlay');
+            side.classList.toggle('active');
+            over.style.display = side.classList.contains('active') ? 'block' : 'none';
+        }
+
+        // Gestion des Modals (Interactions)
+        function openModal(id) {
+            document.getElementById(id).style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // Empêche le scroll derrière
+        }
+
+        // ===== TRACKING VIDEO =====
+let playing = false;
+let progress = 0;
+let interval;
+
+function startTracking(){
+    clearInterval(interval);
+    progress = 0;
+
+    interval = setInterval(()=>{
+        if(playing){
+            proprogress++;
+console.log("Progression:", progress);gress++;
+            
+
+
+            if(progress === 10){
+                views++;
+                localStorage.setItem("views", views);
+                console.log("Vue comptée");
+            }
+
+            if(progress === 70){
+                watch++;
+                localStorage.setItem("watch", watch);
+                console.log("Film vu");
+            }
+        }
+    },1000);
+}
+
+function togglePlay(){
+    playing = !playing;
+
+    const status = document.getElementById("status");
+
+    if(playing){
+        status.innerText = "▶️ Lecture en cours...";
+    } else {
+        status.innerText = "⏸️ En pause";
+    }
+}
+        function closeModal(id) {
+    document.getElementById(id).style.display = 'none';
+    document.body.style.overflow = 'auto';
+    clearInterval(interval);
+}
+
+    </script>
+</body>
+</html>
